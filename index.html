@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>ExpenseTap</title>
+  <link rel="stylesheet" href="./style.css?v=2" />
+  <style>
+    /* Local overrides for ExpenseTap content within the shell */
+    .dashboard-container {
+      padding: 16px;
+      padding-bottom: 100px;
+      /* Space for bottom tabbar */
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Navigation Drawer -->
+  <div class="nav-drawer-overlay" id="drawerOverlay"></div>
+  <aside class="nav-drawer" id="navDrawer">
+    <div class="drawer-header">
+      <div class="drawer-avatar"
+        style="overflow:hidden; display:flex; align-items:center; justify-content:center; background:#E5E7EB;">
+        <span style="font-size:16px; font-weight:bold; color:#6B7280;">USER</span>
+      </div>
+      <div class="drawer-name" id="drawer-userName">使用者</div>
+      <div class="drawer-email" id="drawer-userEmail">--</div>
+    </div>
+    <div class="drawer-menu">
+      <div class="drawer-item" id="nav-home">首頁</div>
+      <div class="drawer-item" id="nav-settings">設定</div>
+      <div style="height: 1px; background: #E5E7EB; margin: 8px 0;"></div>
+      <div class="drawer-item" style="color: #EF4444;" id="nav-logout">登出</div>
+    </div>
+  </aside>
+
+  <!-- App Shell -->
+  <div class="app-shell">
+
+    <!-- Top Header -->
+    <header class="top-nav-container">
+      <div class="top-nav-fixed">
+        <button class="btn-menu" id="btnOpenDrawer">☰</button>
+        <div style="font-size: 18px; font-weight: bold; margin-left: 12px;">ExpenseTap</div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContainer" style="overflow-y: auto;">
+      <div class="dashboard-container">
+
+        <!-- Auth Section Removed per Line integration request -->
+        <!-- <section class="card" id="authCard">
+          <h2>登入</h2>
+          <div class="row">
+            <input id="email" class="form-input" type="email" placeholder="Email" autocomplete="email"
+              style="flex:1;" />
+            <input id="password" class="form-input" type="password" placeholder="Password"
+              autocomplete="current-password" style="flex:1;" />
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <button id="btnSignUp" class="btn-ocr-action btn-ocr-secondary">註冊</button>
+            <button id="btnSignIn" class="btn-ocr-action btn-ocr-primary">登入</button>
+            <button id="btnSignOut" class="btn-ocr-action btn-ocr-secondary" disabled>登出</button>
+          </div>
+          <p class="hint" id="authStatus">尚未登入</p>
+        </section> -->
+
+        <!-- View Switcher -->
+        <div class="segmented-control" id="viewSwitcher">
+          <div class="segmented-item active" data-target="create">新增費用</div>
+          <div class="segmented-item" data-target="history">紀錄</div>
+          <div class="segmented-item" data-target="search">進階搜尋</div>
+        </div>
+
+        <!-- Create Expense Section -->
+        <section class="card" id="expenseCard">
+          <div class="form-group-stack">
+
+            <div class="form-row">
+              <label class="form-label">我的身份</label>
+              <div class="form-control-wrapper">
+                <div class="custom-select-container">
+                  <select id="identitySelect" class="form-input" style="width:100%"></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">名片名稱</label>
+              <div class="form-control-wrapper">
+                <div class="custom-select-container">
+                  <select id="identityProfileSelect" class="form-input" style="width:100%"></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">朋友名稱</label>
+              <div class="form-control-wrapper">
+                <div class="custom-select-container">
+                  <select id="customerSelect" class="form-input" style="width:100%">
+                    <option value="">請選擇朋友</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">日期</label>
+              <div class="form-control-wrapper">
+                <input id="expenseDate" class="form-input" type="date" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">金額</label>
+              <div class="form-control-wrapper">
+                <input id="amount" class="form-input" type="number" step="0.01" placeholder="例如 120" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">幣別</label>
+              <div class="form-control-wrapper">
+                <div class="custom-select-container">
+                  <select id="currency" class="form-input" style="width:100%"></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">備註</label>
+              <div class="form-control-wrapper">
+                <input id="note" class="form-input" placeholder="選填" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">上傳收據</label>
+              <div class="form-control-wrapper">
+                <input id="receiptFile" type="file" accept="image/*" class="form-input" style="padding:6px;" />
+                <span class="hint" id="uploadStatus" style="display:block; margin-top:4px;"></span>
+                <div id="editAttachmentsList" class="attachments-list" style="margin-top: 8px;"></div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">請款狀態</label>
+              <div class="form-control-wrapper">
+                <div class="custom-select-container">
+                  <select id="claimStatus" class="form-input" style="width:100%">
+                    <option value="unclaimed">未請款</option>
+                    <option value="claimed">已請款</option>
+                    <option value="partial">部分請款</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="row" style="margin-top:24px;">
+            <button id="btnCreateExpense" class="btn-large-action" disabled>建立費用</button>
+          </div>
+          <span class="hint" id="createStatus"></span>
+        </section>
+
+        <!-- List Section -->
+        <section class="card" id="historyCard" style="display:none;">
+          <!-- Month Filter -->
+          <div id="monthFilterContainer" class="month-filter-container">
+            <button id="btnPrevMonth" class="btn-icon-only">
+              <svg viewBox="0 0 24 24" fill="none" class="icon-sm" stroke="currentColor">
+                <path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <span id="lblCurrentMonth" class="month-label">YYYY-MM</span>
+            <button id="btnNextMonth" class="btn-icon-only">
+              <svg viewBox="0 0 24 24" fill="none" class="icon-sm" stroke="currentColor">
+                <path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+
+          <div id="expenseList" class="list"></div>
+
+          <!-- Pagination -->
+          <div id="historyPagination" class="pagination-container" style="display:none;">
+            <button id="btnHistoryPrev" class="btn-icon-only">
+              <svg viewBox="0 0 24 24" fill="none" class="icon-sm" stroke="currentColor">
+                <path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <span id="historyPageLabel" class="pagination-label">第 1 頁</span>
+            <button id="btnHistoryNext" class="btn-icon-only">
+              <svg viewBox="0 0 24 24" fill="none" class="icon-sm" stroke="currentColor">
+                <path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </section>
+
+        <!-- Search Section -->
+        <section class="card" id="searchCard" style="display:none;">
+          <h2>進階搜尋</h2>
+          <div class="form-group-stack">
+            <div class="form-row">
+              <label class="form-label">關鍵字</label>
+              <input id="searchKeyword" class="form-input" placeholder="搜尋備註..." />
+            </div>
+            <div class="form-row">
+              <label class="form-label">付款對象</label>
+              <div class="custom-select-container">
+                <select id="searchFriendId" class="form-input" style="width:100%">
+                  <option value="">所有朋友</option>
+                </select>
+              </div>
+            </div>
+            <button id="btnSearch" class="btn-large-action">搜尋</button>
+          </div>
+
+          <div style="margin-top:20px;">
+            <div id="searchResultList" class="list"></div>
+          </div>
+
+          <!-- Search Pagination -->
+          <div id="searchPagination" class="pagination-container" style="display:none;">
+            <button id="btnSearchPrev" class="btn-icon-only">
+              <svg viewBox="0 0 24 24" fill="none" class="icon-sm" stroke="currentColor">
+                <path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+            <span id="searchPageLabel" class="pagination-label">第 1 頁</span>
+            <button id="btnSearchNext" class="btn-icon-only">
+              <svg viewBox="0 0 24 24" fill="none" class="icon-sm" stroke="currentColor">
+                <path d="M9 18l6-6-6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </section>
+
+        <!-- Manage Section removed per user request (will use SQL) -->
+        <!-- <section class="card" id="manageCard">
+          <h2>管理分類</h2>
+          <div class="form-group-stack">
+
+            <div class="form-row">
+              <label class="form-label">新增我的身份</label>
+              <div class="form-control-wrapper" style="display:flex; gap:8px;">
+                <input id="newIdentityName" class="form-input" placeholder="輸入身份名稱" />
+                <button id="btnAddIdentity" class="btn-ocr-action btn-ocr-secondary"
+                  style="width:auto; white-space:nowrap;">新增</button>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">新增名片名稱</label>
+              <div class="form-control-wrapper" style="display:flex; gap:8px;">
+                <input id="newIdentityProfileName" class="form-input" placeholder="輸入名片名稱" />
+                <button id="btnAddIdentityProfile" class="btn-ocr-action btn-ocr-secondary"
+                  style="width:auto; white-space:nowrap;">新增</button>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">新增朋友名稱</label>
+              <div class="form-control-wrapper" style="display:flex; gap:8px;">
+                <input id="newCustomerName" class="form-input" placeholder="輸入朋友名稱" />
+                <button id="btnAddCustomer" class="btn-ocr-action btn-ocr-secondary"
+                  style="width:auto; white-space:nowrap;">新增</button>
+              </div>
+            </div>
+
+          </div>
+        </section> -->
+
+
+        <!-- Spacer to ensure content clears floating bottom menu -->
+        <div style="height: 120px; width: 100%; flex-shrink: 0;"></div>
+
+      </div>
+    </main>
+
+    <!-- Bottom Menu -->
+    <div class="bottom-tabbar-container" id="bottomMenu">
+      <nav class="bottom-tabbar">
+        <button class="tab-item active" id="tab-expense">
+          <div class="tab-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+              width="24" height="24">
+              <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+          </div>
+          <div class="tab-label">記帳</div>
+        </button>
+        <button class="tab-item" id="tab-analysis">
+          <div class="tab-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+              width="24" height="24">
+              <line x1="18" y1="20" x2="18" y2="10" />
+              <line x1="12" y1="20" x2="12" y2="4" />
+              <line x1="6" y1="20" x2="6" y2="14" />
+            </svg>
+          </div>
+          <div class="tab-label">分析</div>
+        </button>
+        <!-- Retaining Namecard visual style but using ExpenseTap icons/labels placeholder -->
+      </nav>
+    </div>
+
+  </div>
+
+  <!-- Custom Confirmation Modal -->
+  <div id="confirmModal" class="modal-overlay">
+    <div class="modal-card">
+      <h3 class="modal-title" id="modalTitle">確認</h3>
+      <p class="modal-message" id="modalMessage">訊息內容</p>
+      <div class="modal-actions">
+        <button id="btnModalCancel" class="modal-btn cancel">取消</button>
+        <button id="btnModalConfirm" class="modal-btn confirm">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Alert Modal (Success/Info) -->
+  <div id="alertModal" class="modal-overlay">
+    <div class="modal-card">
+      <h3 id="alertTitle" class="modal-title">通知</h3>
+      <div id="alertMessage" class="modal-message" style="margin-bottom: 24px;">訊息內容</div>
+      <div class="modal-actions" style="justify-content: center;">
+        <button id="btnAlertOk" class="modal-btn primary" style="width: 100%;">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Viewer Modal -->
+  <div id="imageViewerModal" class="modal-overlay image-viewer-overlay">
+    <div class="viewer-content">
+      <button id="btnViewerClose" class="viewer-close-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <button id="btnViewerPrev" class="viewer-nav-btn prev">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+
+      <img id="viewerImage" class="viewer-image" src="" alt="Receipt">
+
+      <div id="viewerLoader" class="viewer-loader">
+        <svg class="spinner" viewBox="0 0 50 50">
+          <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+        </svg>
+      </div>
+
+      <button id="btnViewerNext" class="viewer-nav-btn next">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+
+      <div id="viewerCounter" class="viewer-counter">1 / 1</div>
+    </div>
+  </div>
+
+
+  <script type="module" src="./app.js?v=2"></script>
+</body>
+
+</html>
