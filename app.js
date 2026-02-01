@@ -13,6 +13,7 @@ const authStatus = el("authStatus");
 const createStatus = el("createStatus");
 const uploadStatus = el("uploadStatus");
 const expenseList = el("expenseList");
+const selCategory = el("selCategory");
 
 let currentUser = null;
 let lastExpenseId = null;
@@ -64,6 +65,8 @@ el("btnCreateExpense").addEventListener("click", async () => {
     const amount = Number(el("amount").value);
     const currency = el("currency").value || "TWD";
     const expenseDate = el("expenseDate").value;
+    const title = el("expenseTitle").value.trim();
+    const categoryId = el("selCategory").value;
     const claimStatus = el("claimStatus").value;
     const note = el("note").value.trim() || null;
 
@@ -71,6 +74,8 @@ el("btnCreateExpense").addEventListener("click", async () => {
     if (!identityProfileId) throw new Error("請選名片名稱");
     if (!customerId) throw new Error("請選朋友名稱");
     if (!amount || amount <= 0) throw new Error("金額需大於 0");
+    if (!title) throw new Error("請輸入費用名稱");
+    if (!categoryId || categoryId === "ADD_NEW") throw new Error("請選擇費用分類");
     if (!expenseDate) throw new Error("請選日期");
 
     // Start Loading
@@ -98,12 +103,14 @@ el("btnCreateExpense").addEventListener("click", async () => {
       const { data, error } = await supabase
         .from("expenses")
         .update({
-          // user_id shouldn't change
+          user_id: userId,
           identity_id: identityId,
           identity_profile_id: identityProfileId,
           customer_id: customerId,
           amount,
           currency,
+          title, // New Field
+          category_id: categoryId,
           expense_date: expenseDate,
           claim_status: claimStatus,
           note
@@ -127,6 +134,8 @@ el("btnCreateExpense").addEventListener("click", async () => {
           customer_id: customerId,
           amount,
           currency,
+          title, // New Field
+          category_id: categoryId,
           expense_date: expenseDate,
           claim_status: claimStatus,
           note
@@ -286,7 +295,7 @@ async function loadExpenses() {
     // Fetch expenses (Filter deleted + Date Range + Pagination)
     const { data, error, count: dbCount } = await supabase
       .from("expenses")
-      .select("id, amount, currency, expense_date, claim_status, note, created_at, identity_id, identity_profile_id, customer_id", { count: 'exact' })
+      .select("id, amount, currency, title, expense_date, claim_status, note, created_at, identity_id, identity_profile_id, customer_id", { count: 'exact' })
       .is("deleted_at", null)
       .gte("expense_date", startStr)
       .lte("expense_date", endStr)
@@ -335,14 +344,22 @@ async function loadExpenses() {
     (friends || []).forEach(f => {
       friendMap[f.id] = f.name;
     });
+    (friends || []).forEach(f => {
+      friendMap[f.id] = f.name;
+    });
   }
 
+  // Fetch Categories Map
+  const { data: cats } = await supabase.from("ref_categories").select("id, name");
+  const categoryMap = {};
+  (cats || []).forEach(c => categoryMap[c.id] = c.name);
+
   // Render List
-  renderExpenseListUI(expenseList, expenses, friendMap, attachmentsByExpense);
+  renderExpenseListUI(expenseList, expenses, friendMap, attachmentsByExpense, categoryMap);
 }
 
 // Reusable Render Function
-function renderExpenseListUI(container, expenses, friendMap, attachmentsByExpense) {
+function renderExpenseListUI(container, expenses, friendMap, attachmentsByExpense, categoryMap = {}) {
   if (expenses.length === 0) {
     container.innerHTML = '<div class="hint">沒有找到相關費用</div>';
     return;
@@ -362,7 +379,10 @@ function renderExpenseListUI(container, expenses, friendMap, attachmentsByExpens
             <div class="history-row date">${x.expense_date}</div>
             <div class="history-row friend">${escapeHtml(friendName)}</div>
             <div class="history-row amount">${x.currency || "TWD"} <strong>${x.amount}</strong></div>
-            <div class="history-row note">${x.note ? escapeHtml(x.note) : "無備註"}</div>
+            <div class="history-row title" style="font-weight:600; color:#111; margin-bottom:2px;">
+              ${escapeHtml(x.title || "無名稱")}
+              ${x.category_id ? `<span style="font-size:12px; font-weight:normal; color:#6B7280; background:#F3F4F6; padding:2px 6px; border-radius:4px; margin-left:6px;">${escapeHtml(categoryMap[x.category_id] || "")}</span>` : ""}
+            </div>
             <div class="history-row attachment">附件：${count} 張</div>
           </div>
           <div class="history-actions-right">
@@ -371,6 +391,7 @@ function renderExpenseListUI(container, expenses, friendMap, attachmentsByExpens
           ``
         }
              <button class="history-btn-action edit" data-edit-id="${x.id}" data-json='${JSON.stringify(x).replace(/'/g, "&#39;")}'>修改</button>
+             <button class="history-btn-action detail" data-detail-id="${x.id}" data-json='${JSON.stringify(x).replace(/'/g, "&#39;")}'>詳細</button>
              <button class="history-btn-action delete" data-delete-id="${x.id}" data-json='${JSON.stringify(x).replace(/'/g, "&#39;")}'>刪除</button>
           </div>
         </div>
@@ -388,6 +409,13 @@ function bindListButtons() {
     btn.addEventListener("click", () => {
       const json = JSON.parse(btn.getAttribute("data-json"));
       window.editExpense(json.id);
+    });
+  });
+
+  document.querySelectorAll("[data-detail-id]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const json = JSON.parse(btn.getAttribute("data-json"));
+      window.viewExpense(json.id);
     });
   });
 
@@ -567,7 +595,8 @@ async function executeSearch() {
 
     let query = supabase
       .from("expenses")
-      .select("id, amount, currency, expense_date, claim_status, note, created_at, identity_id, identity_profile_id, customer_id", { count: 'exact' })
+      .from("expenses")
+      .select("id, amount, currency, title, expense_date, claim_status, note, created_at, identity_id, identity_profile_id, customer_id", { count: 'exact' })
       .is("deleted_at", null)
       .order("expense_date", { ascending: false });
 
@@ -609,8 +638,13 @@ async function executeSearch() {
       (friends || []).forEach(f => friendMap[f.id] = f.name);
     }
 
+    // 3. Categories
+    const { data: cats } = await supabase.from("ref_categories").select("id, name");
+    const categoryMap = {};
+    (cats || []).forEach(c => categoryMap[c.id] = c.name);
+
     // Render
-    renderExpenseListUI(searchResultList, expenses, friendMap, attachmentsByExpense);
+    renderExpenseListUI(searchResultList, expenses, friendMap, attachmentsByExpense, categoryMap);
     updatePaginationUI("search", searchPage, count);
 
   } catch (e) {
@@ -820,7 +854,10 @@ function validateForm() {
 }
 
 // Init Dropdowns
-await fetchIdentities();
+await Promise.all([
+  fetchIdentities(),
+  fetchCategories()
+]);
 validateForm(); // logic check on load
 
 // ... existing code ...
@@ -1025,6 +1062,8 @@ window.editExpense = async (id) => {
   }
 
   el("expenseDate").value = item.expense_date;
+  el("expenseTitle").value = item.title || "";
+  el("selCategory").value = item.category_id || "";
   el("amount").value = item.amount;
   el("currency").value = item.currency;
   el("note").value = item.note || "";
@@ -1041,8 +1080,8 @@ window.editExpense = async (id) => {
   // Update Button Text
   const btnCreate = el("btnCreateExpense");
   btnCreate.textContent = "更新費用";
+  btnCreate.style.display = "block"; // Ensure visible
   btnCreate.disabled = false;
-  // User requested to remove text: createStatus.textContent = `正在修改費用`;
   createStatus.textContent = "";
 
   // Disable Identity/Friend fields (Modification not allowed)
@@ -1072,6 +1111,8 @@ function resetForm() {
   currentEditingId = null;
   lastExpenseId = null; // Clear last expense ID
   el("amount").value = "";
+  el("expenseTitle").value = "";
+  el("selCategory").value = "";
   el("note").value = "";
   el("receiptFile").value = "";
   if (el("editAttachmentsList")) el("editAttachmentsList").innerHTML = "";
@@ -1081,7 +1122,19 @@ function resetForm() {
   selProfile.disabled = false;
   selCustomer.disabled = false;
 
+  // Re-enable other fields (if disabled by view mode)
+  el("expenseDate").disabled = false;
+  el("expenseTitle").disabled = false;
+  el("selCategory").disabled = false;
+  el("currency").disabled = false;
+  el("amount").disabled = false;
+  el("claimStatus").disabled = false;
+  el("note").disabled = false;
+  el("receiptFile").disabled = false;
+
+  // Show Update Button logic
   const btn = el("btnCreateExpense");
+  btn.style.display = "block";
   btn.textContent = "建立費用";
   createStatus.textContent = "";
 
@@ -1094,6 +1147,41 @@ function resetForm() {
   // (We check if we are currently in 'create' view to avoid jumping if called from elsewhere)
   const tabReturn = document.querySelector(`.segmented-item[data-target="${lastReturnTab}"]`);
   if (tabReturn) tabReturn.click();
+}
+
+
+
+// --------------------------------------------------------------------------
+// View Expense Logic (Read Only)
+// --------------------------------------------------------------------------
+window.viewExpense = async function (id) {
+  // Reuse Load Logic
+  await window.editExpense(id);
+
+  // Disable ALL fields
+  el("expenseDate").disabled = true;
+  el("expenseTitle").disabled = true;
+  el("selCategory").disabled = true;
+  el("currency").disabled = true;
+  el("amount").disabled = true;
+  el("claimStatus").disabled = true;
+  el("note").disabled = true;
+  el("receiptFile").disabled = true;
+
+  // Hide Update Button
+  const btnCreate = el("btnCreateExpense");
+  if (btnCreate) btnCreate.style.display = "none";
+
+  // Change Cancel Button to "Back"
+  const btnCancel = el("btnCancelEdit");
+  if (btnCancel) {
+    btnCancel.textContent = "返回列表";
+    // Also remove secondary class to look like primary action? Or keep simple.
+    // btnCancel.className = "btn-large-action"; 
+  }
+
+  // Hide Edit Attachments Delete Buttons
+  document.querySelectorAll(".btn-delete-attachment").forEach(b => b.style.display = "none");
 }
 
 // --------------------------------------------------------------------------
@@ -1339,3 +1427,100 @@ function toggleZoom() {
 }
 
 
+
+// ==========================================
+// Category Logic
+// ==========================================
+async function fetchCategories() {
+  const { data, error } = await supabase
+    .from("ref_categories")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("fetchCategories error", error);
+    return;
+  }
+
+  // Manually Populate to handle special "Add New" option
+  selCategory.innerHTML = "";
+
+  // Default Option
+  const defaultOpt = document.createElement("option");
+  defaultOpt.value = "";
+  defaultOpt.textContent = "請選擇費用分類";
+  selCategory.appendChild(defaultOpt);
+
+  // DB Options
+  (data || []).forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = c.name;
+    selCategory.appendChild(opt);
+  });
+
+  // Separator
+  const sep = document.createElement("option");
+  sep.disabled = true;
+  sep.textContent = "──────────";
+  selCategory.appendChild(sep);
+
+  // Add New Option
+  const addOpt = document.createElement("option");
+  addOpt.value = "ADD_NEW";
+  addOpt.textContent = "➕ 新增分類...";
+  selCategory.appendChild(addOpt);
+}
+
+// Bind Category Change
+if (selCategory) {
+  selCategory.addEventListener("change", () => {
+    if (selCategory.value === "ADD_NEW") {
+      selCategory.value = ""; // Reset visual selection
+      openCategoryModal();
+    }
+  });
+}
+
+const categoryModal = el("categoryModal");
+const btnSaveCategory = el("btnSaveCategory");
+const btnCancelCategory = el("btnCancelCategory");
+
+function openCategoryModal() {
+  el("newCategoryName").value = "";
+  if (categoryModal) categoryModal.classList.add("visible");
+  setTimeout(() => el("newCategoryName").focus(), 100);
+}
+
+if (btnCancelCategory) {
+  btnCancelCategory.onclick = () => {
+    if (categoryModal) categoryModal.classList.remove("visible");
+  };
+}
+
+if (btnSaveCategory) {
+  btnSaveCategory.onclick = async () => {
+    const name = el("newCategoryName").value.trim();
+    if (!name) return alert("請輸入分類名稱");
+
+    showLoader();
+    try {
+      const { data, error } = await supabase
+        .from("ref_categories")
+        .insert({ name })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await fetchCategories();
+      selCategory.value = data.id; // Auto select new category
+
+      if (categoryModal) categoryModal.classList.remove("visible");
+    } catch (e) {
+      alert("新增失敗: " + e.message);
+    } finally {
+      hideLoader();
+    }
+  };
+}

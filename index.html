@@ -118,6 +118,15 @@
             </div>
 
             <div class="form-row">
+              <label class="form-label">幣別</label>
+              <div class="form-control-wrapper">
+                <div class="custom-select-container">
+                  <select id="currency" class="form-input" style="width:100%"></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
               <label class="form-label">金額</label>
               <div class="form-control-wrapper">
                 <input id="amount" class="form-input" type="number" step="0.01" placeholder="例如 120" />
@@ -125,10 +134,17 @@
             </div>
 
             <div class="form-row">
-              <label class="form-label">幣別</label>
+              <label class="form-label">費用名稱</label>
+              <div class="form-control-wrapper">
+                <input id="expenseTitle" class="form-input" placeholder="例如：午餐、車資..." />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label">費用分類</label>
               <div class="form-control-wrapper">
                 <div class="custom-select-container">
-                  <select id="currency" class="form-input" style="width:100%"></select>
+                  <select id="selCategory" class="form-input" style="width:100%"></select>
                 </div>
               </div>
             </div>
